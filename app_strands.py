@@ -18,6 +18,9 @@ from strands.types.content import ContentBlock, Message, Messages
 from strands.types.media import ImageFormat
 from strands_tools import current_time, http_request
 
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv())
+
 nest_asyncio.apply()
 
 os.environ["DEV"] = "true"
@@ -95,7 +98,7 @@ async def main():
     Returns:
         None
     """
-    st.title("Strands agent")
+    st.title("客服分析助手")
 
     with open("config/config.json", "r") as f:
         config = json.load(f)
@@ -202,9 +205,10 @@ async def main():
         #         cache_prompt="default" if enable_prompt_cache_system else None,
         #         cache_tools="default" if enable_prompt_cache_tools else None,
         # ),
+        SILICONFLOW_KEY = os.getenv("SILICONFLOW_KEY")
         deepseek_model = OpenAIModel(
             client_args = {
-                "api_key": "sk-unvlmjmbfnbzpxsmgdpqtlegntizdaipqtxmhxyauynxarur",
+                "api_key": SILICONFLOW_KEY,
                 "base_url": "https://api.siliconflow.cn/v1"
             },
             model_id = "deepseek-ai/DeepSeek-V3",

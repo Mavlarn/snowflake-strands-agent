@@ -15,11 +15,16 @@ import yaml
 from mcp import StdioServerParameters, stdio_client
 from strands import Agent
 from strands.models import BedrockModel
+from strands.models.openai import OpenAIModel
+
 from strands.tools.mcp import MCPClient
 from strands.tools.mcp.mcp_agent_tool import MCPAgentTool
 from strands.types.content import ContentBlock, Message, Messages
 from strands.types.media import ImageFormat
 from strands_tools import current_time, http_request
+
+from dotenv import load_dotenv, find_dotenv
+load_dotenv(find_dotenv())
 
 nest_asyncio.apply()
 
@@ -98,7 +103,7 @@ async def main():
     Returns:
         None
     """
-    st.title("Strands agent")
+    st.title("客服分析助手")
 
     with open("config/config.json", "r") as f:
         config = json.load(f)
@@ -264,14 +269,17 @@ async def main():
 
             # from agent_strands import snowflake_tools
             tools = mcp_tools + builtin_tools
-
+            SILICONFLOW_KEY = os.getenv("SILICONFLOW_KEY")
+            print('SILICONFLOW_KEY', SILICONFLOW_KEY)
+            deepseek_model = OpenAIModel(
+                client_args = {
+                    "api_key": SILICONFLOW_KEY,
+                    "base_url": "https://api.siliconflow.cn/v1"
+                },
+                model_id = "deepseek-ai/DeepSeek-V3",
+            )
             agent = Agent(
-                model=BedrockModel(
-                    model_id=st.session_state.model_id,
-                    boto_session=boto3.Session(region_name=bedrock_region),
-                    cache_prompt="default" if enable_prompt_cache_system else None,
-                    cache_tools="default" if enable_prompt_cache_tools else None,
-                ),
+                model=deepseek_model,
                 system_prompt="You are an excellent AI agent!",
                 messages=convert_messages(
                     messages, enable_cache=enable_prompt_cache_messages
