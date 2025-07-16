@@ -281,9 +281,8 @@ async def main():
             agent = Agent(
                 model=deepseek_model,
                 system_prompt="You are an excellent AI agent!",
-                messages=convert_messages(
-                    messages, enable_cache=enable_prompt_cache_messages
-                ),
+                # messages=convert_messages(messages, enable_cache=enable_prompt_cache_messages),
+                messages=convert_messages(messages, enable_cache=False), # enable_cache=False for DeepSeek
                 callback_handler=None,
                 tools=tools,
             )
