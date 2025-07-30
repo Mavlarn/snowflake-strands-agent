@@ -1,15 +1,10 @@
 import asyncio
-from typing import Any, Dict
-import requests
 import logging, os
 
 from strands import tool
-
-
 from agent_gateway.tools import CortexAnalystTool, CortexSearchTool, PythonTool
 
 from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.tools import Tool
 
 # Initialize FastMCP server
 mcp = FastMCP("snowflake_strands_agent")
@@ -57,7 +52,7 @@ analyst = CortexAnalystTool(**analyst_config)
 review_search_config = {
     "service_name": CORTEX_SEARCH_PRODUCT_REVIEWS_SEARCH,
     "service_topic": "product reviews in order",
-    "data_description": "搜索订单产品的评论信息",
+    "data_description": "从订单产品评论表中的，评论信息中进行搜索，返回评论记录列表",
     "retrieval_columns": [
         "product_name", "brand", "category", "price", "total_amount",
         "rating", "review_content", "review_date"
@@ -69,7 +64,7 @@ review_search = CortexSearchTool(**review_search_config)
 cs_log_search_config = {
     "service_name": CORTEX_SEARCH_CS_RECORDS_SEARCH,
     "service_topic": "customer service records/log",
-    "data_description": "从订单产品的客服记录中进行搜索, 返回客服记录列表",
+    "data_description": "从订单产品的客服记录中的通话内容中进行搜索, 返回客服记录列表",
     "retrieval_columns": [
         "product_name", "brand", "category", "price", "total_amount",
         "resolution_status", "conversation_log", "created_date"
@@ -90,53 +85,19 @@ def review_search_tool(query):
     print("response from search_tool:", response)
     return response
 
-"""
-search_tool(query: str) -> list:
-    - 从客服记录中进行搜索订单、产品相关的记录
-    - 返回包含客服记录的列表
-"""
-
 @tool(description=cs_log_search.description)
 def cs_log_search_tool(query):
     response = asyncio.run(cs_log_search.asearch(query))
     print("response from search_tool:", response)
     return response
 
+snowflake_tools = [analyst_tool, review_search_tool, cs_log_search_tool]
+
+
 
 mcp.add_tool(analyst.query, name="analyst_tool", description=analyst.description)
 mcp.add_tool(review_search.asearch, name="review_search_tool", description=review_search.description)
 mcp.add_tool(cs_log_search.asearch, name="cs_log_search_tool", description=cs_log_search.description)
-
-snowflake_tools = [analyst_tool, review_search_tool, cs_log_search_tool]
-# @mcp.tool()
-# async def analyst_tool_mcp(query) -> Dict[str, Any]:
-#     """
-#     analyst_tool(query: str) -> str:
-#         - takes a user's question about products, orders, logistic, reviews and customer services log, and query the data. Can only query from one table at one time.
-#         - Returns the relevant data about requested
-#     """
-#     response = await analyst.query(query)
-#     return response
-
-# @mcp.tool()
-# async def review_search_tool_mcp(query):
-#     """
-#     search_tool(query: str) -> list:
-#         - Executes a search for relevant information about product reviews by customer
-#         - Returns a list of relevant data from product reviews
-#     """
-#     response = await review_search.asearch(query)
-#     return response
-
-# @mcp.tool()
-# async def cs_log_search_tool_mcp(query):
-#     """
-#     search_tool(query: str) -> list:
-#         - 从客服记录中进行搜索订单、产品相关的记录
-#         - 返回包含客服记录的列表
-#     """
-#     response = await cs_log_search.asearch(query)
-#     return response
 
 if __name__ == "__main__":
     mcp.run(transport='stdio')
