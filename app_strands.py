@@ -4,13 +4,14 @@ import glob
 import json
 import os
 import time
+import ast
 from pathlib import Path
 from typing import cast, get_args
 
 import boto3
 import nest_asyncio
 import streamlit as st
-import yaml
+import yaml, logging
 from strands import Agent
 from strands.models import BedrockModel
 from strands.models.openai import OpenAIModel
@@ -29,6 +30,11 @@ format = {"image": list(get_args(ImageFormat))}
 
 builtin_tools = [current_time, http_request]
 
+# Sets the logging format and streams logs to stderr
+logging.basicConfig(
+    format="%(levelname)s | %(name)s | %(message)s",
+    handlers=[logging.StreamHandler()]
+)
 
 async def streaming(stream):
     """
@@ -55,6 +61,8 @@ async def streaming(stream):
                 if "toolUse" in content.keys():
                     yield f"\n\n🔧 Using tool:\n```json\n{json.dumps(content, indent=2, ensure_ascii=False)}\n```\n\n"
                 if "toolResult" in content.keys():
+                    # tool_result_text = content['toolResult']['content'][0]['text']
+                    # content['toolResult']['content'][0]['text'] = ast.literal_eval(tool_result_text)
                     yield f"\n\n🔧 Tool result:\n```json\n{json.dumps(content, indent=2, ensure_ascii=False)}\n```\n\n"
 
 
@@ -197,29 +205,34 @@ async def main():
                 },
             ]
 
-        from agent_strands import snowflake_tools
+        from agent_strands import snowflake_cs_tools
 
-        # bedrock_model = BedrockModel(
-        #         model_id=st.session_state.model_id,
-        #         boto_session=boto3.Session(region_name=bedrock_region),
-        #         cache_prompt="default" if enable_prompt_cache_system else None,
-        #         cache_tools="default" if enable_prompt_cache_tools else None,
-        # ),
-        SILICONFLOW_KEY = os.getenv("SILICONFLOW_KEY")
-        deepseek_model = OpenAIModel(
-            client_args = {
-                "api_key": SILICONFLOW_KEY,
-                "base_url": "https://api.siliconflow.cn/v1"
-            },
-            model_id = "deepseek-ai/DeepSeek-V3",
-        )
+        
+        if st.session_state.model_id == "deepseek-ai/DeepSeek-V3":
+            SILICONFLOW_KEY = os.getenv("SILICONFLOW_KEY")
+            the_model = OpenAIModel(
+                client_args = {
+                    "api_key": SILICONFLOW_KEY,
+                    "base_url": "https://api.siliconflow.cn/v1"
+                },
+                model_id = "deepseek-ai/DeepSeek-V3",
+            )
+        else:
+            the_model = BedrockModel(
+                    model_id=st.session_state.model_id,
+                    boto_session=boto3.Session(region_name=bedrock_region),
+                    cache_prompt="default" if enable_prompt_cache_system else None,
+                    cache_tools="default" if enable_prompt_cache_tools else None,
+            )
+
+
         agent = Agent(
-            model=deepseek_model,
-            system_prompt="Y你是一个 AI 工作助手!",
+            model=the_model,
+            system_prompt="你是一个 AI 工作助手!",
             # messages=convert_messages(messages, enable_cache=enable_prompt_cache_messages),
             messages=convert_messages(messages, enable_cache=False), # enable_cache=False for DeepSeek
             callback_handler=None,
-            tools=snowflake_tools,
+            tools=snowflake_cs_tools,
         )
 
         agent_stream = agent.stream_async(prompt=prompt.text)

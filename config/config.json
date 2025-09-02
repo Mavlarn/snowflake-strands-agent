@@ -3,6 +3,10 @@
     "mcp_config_file": "config/mcp.json",
     "bedrock_region": "us-east-1",
     "models": {
+        "deepseek-ai/DeepSeek-V3": {
+            "cache_support": [],
+            "image_support": false
+        },
         "us.anthropic.claude-3-7-sonnet-20250219-v1:0": {
             "cache_support": [
                 "system",

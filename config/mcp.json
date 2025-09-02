@@ -1,18 +1,9 @@
 {
     "mcpServers": {
-        "awsdoc": {
-            "command": "uvx",
-            "args": [
-                "awslabs.aws-documentation-mcp-server@latest"
-            ],
-            "env": {
-                "FASTMCP_LOG_LEVEL": "ERROR"
-            }
-        },
         "Snowflake Cortext Agent MCP": {
             "command": "uv",
             "args": [
-                "--directory", "/home/ubuntu/snowflake_ws/mtsnowflake-cs-agents", "run", "agent_strands.py"
+                "--directory", ".", "run", "agent_strands.py"
             ],
             "env": {
                 "FASTMCP_LOG_LEVEL": "ERROR"

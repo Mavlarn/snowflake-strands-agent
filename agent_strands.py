@@ -2,7 +2,7 @@ import asyncio
 import logging, os
 
 from strands import tool
-from agent_gateway.tools import CortexAnalystTool, CortexSearchTool, PythonTool
+from agent_gateway.tools import CortexAnalystTool, CortexSearchTool, SQLTool
 
 from mcp.server.fastmcp import FastMCP
 
@@ -26,17 +26,12 @@ connection_parameters = {
 _session = Session.builder.configs(connection_parameters).getOrCreate()
 
 # Enables Strands debug log level
-logging.getLogger("strands").setLevel(logging.DEBUG)
+agent_logger = logging.getLogger("strands")
+agent_logger.setLevel(logging.DEBUG)
 
-# Sets the logging format and streams logs to stderr
-logging.basicConfig(
-    format="%(levelname)s | %(name)s | %(message)s",
-    handlers=[logging.StreamHandler()]
-)
-
-SEMANTIC_MODEL_FILE = "customer_service_data.yaml"
+SEMANTIC_MODEL_FILE = "CUSTOMER_SERVICE_DATA.yaml" # 注意要跟Snowflakeke上创建的模型名称一致，注意大小写，如stomer_service_data.yaml
 SEMANTIC_MODEL_STAGE = "models"
-CORTEX_SEARCH_CS_RECORDS_SEARCH = "CS_RECORDS_SEARCH" # 从Snow中根据 retrieval_columns 获取column时使用大些进行匹配
+CORTEX_SEARCH_CS_RECORDS_SEARCH = "CS_RECORDS_SEARCH" # 从Snow中根据 retrieval_columns 获取column时使用大写进行匹配
 CORTEX_SEARCH_PRODUCT_REVIEWS_SEARCH = "PRODUCT_REVIEWS_SEARCH"
 
 analyst_config = {
@@ -73,31 +68,41 @@ cs_log_search_config = {
 }
 cs_log_search = CortexSearchTool(**cs_log_search_config)
 
+
 @tool(description=analyst.description)
 def analyst_tool(query):
-    response = asyncio.run(analyst.query(query))
-    print("response from analyst_tool:", response)
-    return response
+    result = asyncio.run(analyst.query(query))
+    agent_logger.debug(f"response from analyst_tool: {result}")
+    return result
 
 @tool(description=review_search.description)
 def review_search_tool(query):
-    response = asyncio.run(review_search.asearch(query))
-    print("response from search_tool:", response)
-    return response
+    result = asyncio.run(review_search.asearch(query))
+    agent_logger.debug(f"response from review_search_tool: {result}")
+    return result
 
 @tool(description=cs_log_search.description)
 def cs_log_search_tool(query):
-    response = asyncio.run(cs_log_search.asearch(query))
-    print("response from search_tool:", response)
-    return response
+    result = asyncio.run(cs_log_search.asearch(query))
+    agent_logger.debug(f"response from cs_log_search_tool: {result}")
+    return result
 
-snowflake_tools = [analyst_tool, review_search_tool, cs_log_search_tool]
 
+@tool(description="Snowflake SQL execution tool")
+def snowflake_exec_query_tool(query):
+    agent_logger.debug(f"Executing SQL query:\n {query}")
+    table = _session.connection.cursor().execute(query).fetch_pandas_all()
+    agent_logger.debug(f"SQL Tool Response:\n {table.to_markdown()}")
+    return table
+
+snowflake_cs_tools = [analyst_tool, review_search_tool, cs_log_search_tool]
+snowflake_optimizer_tools = [snowflake_exec_query_tool]
 
 
 mcp.add_tool(analyst.query, name="analyst_tool", description=analyst.description)
 mcp.add_tool(review_search.asearch, name="review_search_tool", description=review_search.description)
 mcp.add_tool(cs_log_search.asearch, name="cs_log_search_tool", description=cs_log_search.description)
+mcp.add_tool(snowflake_exec_query_tool, name="snowflake_exec_query_tool", description="Snowflake SQL execution tool")
 
 if __name__ == "__main__":
     mcp.run(transport='stdio')

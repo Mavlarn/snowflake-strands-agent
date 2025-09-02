@@ -18,7 +18,7 @@ SNOWFLAKE_PASSWORD = os.getenv("SNOWFLAKE_PASSWORD")
 SNOWFLAKE_DATABASE = os.getenv("SNOWFLAKE_DATABASE")
 SNOWFLAKE_SCHEMA = os.getenv("SNOWFLAKE_SCHEMA")
 
-SEMANTIC_MODEL_FILE = "customer_service_data.yaml"
+SEMANTIC_MODEL_FILE = "CUSTOMER_SERVICE_DATA.yaml" # 注意要跟Snowflakeke上创建的模型名称一致，注意大小写，如stomer_service_data.yaml
 SEMANTIC_MODEL_STAGE = "models"
 CORTEX_SEARCH_CS_RECORDS_SEARCH = "CS_RECORDS_SEARCH" # 从Snow中根据 retrieval_columns 获取column时使用大些进行匹配
 CORTEX_SEARCH_PRODUCT_REVIEWS_SEARCH = "PRODUCT_REVIEWS_SEARCH"
@@ -64,6 +64,8 @@ async def process_sse_response(resp: httpx.Response) -> Tuple[str, str, List[Dic
         except json.JSONDecodeError:
             continue
         # Grab the 'delta' section, whether top-level or nested in 'data'
+        if not isinstance(evt, dict):
+            continue
         delta = evt.get("delta") or evt.get("data", {}).get("delta")
         if not isinstance(delta, dict):
             continue
